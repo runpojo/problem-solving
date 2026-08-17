@@ -1,60 +1,107 @@
+import java.util.*;
+
 class Solution {
-
-  char[] friends;
-  int[] position;
-  boolean[] isSelected;
-  int n, answer;
-  String[] data;
-
-  public int solution(int n, String[] data) {
-    friends = new char[]{'A', 'C', 'F', 'J', 'M', 'N', 'R', 'T'};
-    position = new int[26];
-    isSelected = new boolean[8];
-    this.n = n;
-    this.data = data;
-    answer = 0;
-
-    permutation(0);
-
-    return answer;
-  }
-
-  private void permutation(int curr) {
-    if (curr == 8) {
-      if (check()) {
-        answer++;
-      }
-      return;
+    
+    private static final int FRIEND_COUNT = 8;
+    private static final char[] FRIENDS = {'A', 'C', 'F', 'J', 'M', 'N', 'R', 'T'};
+    
+    private static Map<Integer, List<Cond>> condMap = new HashMap<>();
+    
+    public int solution(int n, String[] data) {
+        for (int i = 0; i < FRIEND_COUNT; i++) {
+            condMap.put(i, new ArrayList<>());
+        }
+        
+        for (String dat : data) {
+            int from = convertFriendToNumber(dat.charAt(0));
+            int to = convertFriendToNumber(dat.charAt(2));
+            char type = dat.charAt(3);
+            int dist = dat.charAt(4) - '0';
+            condMap.get(from).add(new Cond(to, type, dist));
+            condMap.get(to).add(new Cond(from, type, dist));
+        }
+        
+        int[] position = new int[FRIEND_COUNT];
+        Arrays.fill(position, -1);
+        
+        int answer = comb(0, position);
+        return answer;
     }
-
-    for (int i = 0; i < 8; i++) {
-      if (!isSelected[i]) {
-        isSelected[i] = true;
-        position[friends[i] - 'A'] = curr;
-        permutation(curr + 1);
-        isSelected[i] = false;
-      }
+    
+    private int comb(int curr, int[] position) {
+        if (curr == FRIEND_COUNT) {
+            return 1;
+        }
+        
+        int total = 0;
+        for (int friend = 0; friend < FRIEND_COUNT; friend++) {
+            // 이미 자리를 잡은 경우
+            if (position[friend] != -1) {
+                continue;
+            }
+            
+            // 조건 확인하기
+            if (!checkCond(curr, position, friend)) {
+                continue;
+            }
+            
+            position[friend] = curr;
+            total += comb(curr + 1, position);
+            position[friend] = -1;
+        }
+        
+        return total;
     }
-  }
-
-  private boolean check() {
-    for (String condition : data) {
-      char c1 = condition.charAt(0);
-      char c2 = condition.charAt(2);
-      char op = condition.charAt(3);
-      int gap = condition.charAt(4) - '0' + 1;
-
-      int dist = Math.abs(position[c1 - 'A'] - position[c2 - 'A']);
-
-      if (op == '=' && dist != gap) {
-        return false;
-      } else if (op == '>' && dist <= gap) {
-        return false;
-      } else if (op == '<' && dist >= gap) {
-        return false;
-      }
+    
+    // true: 조건을 만족한 경우 / false: 조건을 만족하지 못한 경우
+    private boolean checkCond(int curr, int[] position, int currFriend) {
+        for (Cond cond : condMap.get(currFriend)) {
+            int targetPosition = position[cond.target];
+            
+            if (targetPosition == -1) {
+                continue;
+            }
+            
+            if ('=' == cond.type) {
+                if (calcDist(curr, targetPosition) != cond.dist) {
+                    return false;
+                }
+            } else if ('<' == cond.type) {
+                if (calcDist(curr, targetPosition) >= cond.dist) {
+                    return false;
+                }
+            } else if ('>' == cond.type) {
+                if (calcDist(curr, targetPosition) <= cond.dist) {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
     }
-
-    return true;
-  }
+    
+    private int calcDist(int position1, int position2) {
+        return Math.abs(position2 - position1) - 1;
+    }
+    
+    private int convertFriendToNumber(char friendName) {
+        for (int i = 0; i < FRIEND_COUNT; i++) {
+            if (FRIENDS[i] == friendName) {
+                return i;
+            }
+        }
+        return -1;
+    }
+    
+    private class Cond {
+        int target;
+        char type;
+        int dist;
+        
+        public Cond(int target, char type, int dist) {
+            this.target = target;
+            this.type = type;
+            this.dist = dist;
+        }
+    }
 }
